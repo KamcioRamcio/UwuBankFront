@@ -84,6 +84,16 @@ empty body
     "customerId": 1
 }
 ```
+### Transfer
+```
+---> api/transfers
+{
+    "senderId": 3,
+    "senderAccountId":3,
+    "receiverAccountId" : 5,
+    "amount": 12
+
+}
 ### ADD MORE ENDPOINTS
 
 ### TODO

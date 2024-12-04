@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import Transfer from "./Transfer";
 import OwnTransfer from "./OwnTransfer";
 import apiUrl from "../../constants/api";
@@ -19,27 +19,18 @@ function CustomerMain() {
     const [ownTransferData, setOwnTransferData] = useState(null);
     const [incomes, setIncomes] = useState(null);
     const [outcomes, setOutcomes] = useState(null);
+    const [cards, setCards] = useState([]);
+    const [cardType, setCardType] = useState('');
+    const [limit, setLimit] = useState('');
+    const [selectedCardAccount, setSelectedCardAccount] = useState('');
 
-    useEffect(() => {
-        fetchAccounts();
-        fetchTransfers();
-        fetchOwnTransfers();
-        fetchIncomes();
-        fetchOutcomes();
-    }, []);
-
-    const handleLogout = () => {
-        localStorage.removeItem('customerData');
-        window.location.href = '/customer/login';
-    };
-
-    const fetchAccounts = async () => {
+    const fetchAccounts = useCallback(async () => {
         const response = await fetch(apiUrl + 'accounts/' + customer.customerId);
         const data = await response.json();
         setAccounts(data);
-    };
+    }, [customer.customerId]);
 
-    const fetchTransfers = async () => {
+    const fetchTransfers = useCallback(async () => {
         try {
             const response = await fetch(apiUrl + 'transfers/customer/' + customer.customerId);
             const data = await response.json();
@@ -48,9 +39,9 @@ function CustomerMain() {
         } catch (error) {
             console.error('Error:', error);
         }
-    };
+    }, [customer.customerId]);
 
-    const fetchOwnTransfers = async () => {
+    const fetchOwnTransfers = useCallback(async () => {
         try {
             const response = await fetch(apiUrl + 'transfers/customer/own/' + customer.customerId);
             const data = await response.json();
@@ -59,9 +50,9 @@ function CustomerMain() {
         } catch (error) {
             console.error('Error:', error);
         }
-    };
+    }, [customer.customerId]);
 
-    const fetchIncomes = async () => {
+    const fetchIncomes = useCallback(async () => {
         try {
             const response = await fetch(apiUrl + 'transactions/incomes/' + customer.customerId);
             const data = await response.json();
@@ -70,9 +61,9 @@ function CustomerMain() {
         } catch (error) {
             console.error('Error:', error);
         }
-    };
+    }, [customer.customerId]);
 
-    const fetchOutcomes = async () => {
+    const fetchOutcomes = useCallback(async () => {
         try {
             const response = await fetch(apiUrl + 'transactions/outcomes/' + customer.customerId);
             const data = await response.json();
@@ -81,6 +72,31 @@ function CustomerMain() {
         } catch (error) {
             console.error('Error:', error);
         }
+    }, [customer.customerId]);
+
+    const fetchCards = useCallback(async () => {
+        try {
+            const response = await fetch(apiUrl + `cards/customer/${customer.customerId}`);
+            const data = await response.json();
+            console.log('Cards:', data);
+            setCards(data);
+        } catch (error) {
+            console.error('Error:', error);
+        }
+    }, [customer.customerId]);
+
+    useEffect(() => {
+        fetchAccounts();
+        fetchTransfers();
+        fetchOwnTransfers();
+        fetchIncomes();
+        fetchOutcomes();
+        fetchCards();
+    }, [fetchAccounts, fetchTransfers, fetchOwnTransfers, fetchIncomes, fetchOutcomes, fetchCards]);
+
+    const handleLogout = () => {
+        localStorage.removeItem('customerData');
+        window.location.href = '/customer/login';
     };
 
     const handleTransferOpen = () => {
@@ -99,10 +115,13 @@ function CustomerMain() {
         setIsOwnTransferOpen(false);
     }
 
-
-
     const handleSendTransfer = async () => {
         setError(null);
+        if (!selectedAccount || !receiverId || !amount) {
+            setError('Please fill in all fields');
+            return;
+        }
+
         const currentDate = new Date().toISOString();
         const senderId = customer.customerId;
 
@@ -110,7 +129,7 @@ function CustomerMain() {
             senderAccountId: selectedAccount,
             senderId,
             receiverAccountId: receiverId,
-            amount,
+            amount: parseFloat(amount),
             currentDate
         };
 
@@ -126,10 +145,11 @@ function CustomerMain() {
             if (!response.ok) {
                 throw new Error('Transfer failed');
             }
-
             const data = await response.json();
             console.log('Transfer successful:', data);
             handleTransferClose();
+            fetchTransfers();
+            fetchOwnTransfers();
         } catch (error) {
             console.error('Error:', error);
             setError('Transfer failed. Please check the details and try again.');
@@ -138,15 +158,20 @@ function CustomerMain() {
 
     const handleSendOwnTransfer = async () => {
         setError(null);
+        if (!selectedFromAccount || !selectedToAccount || !amount) {
+            setError('Please fill in all fields');
+            return;
+        }
+
         const currentDate = new Date().toISOString();
         const ownTransferData = {
             customerId: customer.customerId,
-            amount,
+            amount: parseFloat(amount),
             fromAccountId: selectedFromAccount,
             toAccountId: selectedToAccount,
             currentDate
         };
-        console.log(ownTransferData);
+
         try {
             const response = await fetch(apiUrl + 'transfers/own', {
                 method: 'POST',
@@ -163,11 +188,51 @@ function CustomerMain() {
             const data = await response.json();
             console.log('Own Transfer successful:', data);
             handleOwnTransferClose();
-        }catch (error) {
+            fetchTransfers();
+            fetchOwnTransfers();
+        } catch (error) {
             console.error('Error:', error);
             setError('Own Transfer failed. Please check the details and try again.');
         }
-    }
+    };
+
+    const handleCreateCard = async (event) => {
+        event.preventDefault();
+        setError(null);
+        if (!selectedCardAccount || !cardType || !limit) {
+            setError('Please fill in all fields');
+            return;
+        }
+
+        const cardData = {
+            customerId: customer.customerId,
+            accountId: selectedCardAccount,
+            cardType,
+            limits: parseFloat(limit),
+            status: 'toActive'
+        };
+
+        try {
+            const response = await fetch(apiUrl + 'cards', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(cardData),
+            });
+
+            if (!response.ok) {
+                throw new Error('Card creation failed');
+            }
+
+            const data = await response.json();
+            console.log('Card created successfully:', data);
+            fetchCards();
+        } catch (error) {
+            console.error('Error:', error);
+            setError('Card creation failed. Please check the details and try again.');
+        }
+    };
 
     const getTransactionTitle = (variableName) => {
         const titles = {
@@ -207,6 +272,7 @@ function CustomerMain() {
                 </div>
                 <Transfer isOpen={isTransferOpen} onClose={handleTransferClose}>
                     <select value={selectedAccount} onChange={(e) => setSelectedAccount(e.target.value)}>
+                        <option value="">Select Account</option>
                         {accounts.map((account, index) => (
                             <option key={index} value={account.accountId}>
                                 {account.accountType}
@@ -232,6 +298,7 @@ function CustomerMain() {
                 </Transfer>
                 <OwnTransfer isOpen={isOwnTransferOpen} onClose={handleOwnTransferClose}>
                     <select value={selectedFromAccount} onChange={(e) => setSelectedFromAccount(e.target.value)}>
+                        <option value="">Select From Account</option>
                         {accounts.map((account, index) => (
                             <option key={index} value={account.accountId}>
                                 {account.accountType}
@@ -246,6 +313,7 @@ function CustomerMain() {
                         onChange={(e) => setAmount(e.target.value)}
                     />
                     <select value={selectedToAccount} onChange={(e) => setSelectedToAccount(e.target.value)}>
+                        <option value="">Select To Account</option>
                         {accounts.map((account, index) => (
                             <option key={index} value={account.accountId}>
                                 {account.accountType}
@@ -255,37 +323,83 @@ function CustomerMain() {
                     <button onClick={handleSendOwnTransfer}>SEND</button>
                     {error && <p className="text-red-500">{error}</p>}
                 </OwnTransfer>
-                    <div className="bg-white p-4 rounded-lg shadow-md">
-                        <h3 className="text-lg font-bold mb-2">Accounts</h3>
-                        {accounts.map((account, index) => (
-                            <div key={index} className="mb-4">
-                                <p>Account ID: {account.accountId}</p>
-                                <p>Balance: {account.balance}</p>
-                                <p>Account Type: {account.accountType}</p>
-                            </div>
-                        ))}
-                    </div>
-
-                    {[
-                        {data: transferData, title: 'transfers'},
-                        {data: ownTransferData, title: 'ownTransfers'},
-                        {data: incomes, title: 'incomes'},
-                        {data: outcomes, title: 'outcomes'},
-                    ].map(({data, title}, index) => (
-                        data && (
-                            <div key={index} className="bg-white p-4 rounded-lg shadow-md mb-6">
-                                <h3 className="text-lg font-bold mb-2">{getTransactionTitle(title)}</h3>
-                                {data.sort((a, b) => new Date(b.date) - new Date(a.date)).map((transaction, idx) => (
-                                    <div key={idx} className="mb-4">
-                                        <p>Date: {new Date(transaction.date).toLocaleString()}</p>
-                                        <p>Amount: {transaction.amount}</p>
-                                        <p>Sender Account ID: {transaction.senderAccountId || transaction.fromAccountId || transaction.sender }</p>
-                                        <p>Receiver Account ID: {transaction.receiverAccountId || transaction.toAccountId || transaction.accountId}</p>
-                                    </div>
-                                ))}
-                            </div>
-                        )
+                <div className="bg-white p-4 rounded-lg shadow-md">
+                    <h3 className="text-lg font-bold mb-2">Accounts</h3>
+                    {accounts.map((account, index) => (
+                        <div key={index} className="mb-4">
+                            <p>Account ID: {account.accountId}</p>
+                            <p>Balance: {account.balance}</p>
+                            <p>Account Type: {account.accountType}</p>
+                        </div>
                     ))}
+                </div>
+
+                <div className="bg-white p-4 rounded-lg shadow-md">
+                    <h3 className="text-lg font-bold mb-2">Cards</h3>
+                    {cards.map((card, index) => (
+                        <div key={index} className="mb-4">
+                            <p>Card ID: {card.cardId}</p>
+                            <p>Account ID: {card.accountId}</p>
+                            <p>Card Number: {card.cardNumber}</p>
+                            <p>Card Type: {card.cardType}</p>
+                            <p>Expiration Date: {new Date(card.expirationDate).toLocaleDateString()}</p>
+                            <p>CVV: {card.cvv}</p>
+                            <p>Limit: {card.limits}</p>
+                            <p>Status: {card.status}</p>
+                        </div>
+                    ))}
+                </div>
+
+                <div className="bg-white p-4 rounded-lg shadow-md mb-6">
+                    <h3 className="text-lg font-bold mb-2">Create Card</h3>
+                    <form onSubmit={handleCreateCard}>
+                        <select value={selectedCardAccount} onChange={(e) => setSelectedCardAccount(e.target.value)}>
+                            <option value="">Select Account</option>
+                            {accounts.map((account, index) => (
+                                <option key={index} value={account.accountId}>
+                                    {account.accountType} (ID: {account.accountId})
+                                </option>
+                            ))}
+                        </select>
+                        <select value={cardType} onChange={(e) => setCardType(e.target.value)}>
+                            <option value="">Select Card Type</option>
+                            <option value="DEBIT">DEBIT</option>
+                            <option value="CREDIT">CREDIT</option>
+                        </select>
+                        <input
+                            type="number"
+                            className="pl-6 w-32"
+                            placeholder="Limit"
+                            value={limit}
+                            onChange={(e) => setLimit(e.target.value)}
+                        />
+                        <button type="submit" className="bg-blue-600 text-white px-4 py-2 rounded-md shadow-md hover:bg-blue-700">
+                            Create Card
+                        </button>
+                    </form>
+                    {error && <p className="text-red-500">{error}</p>}
+                </div>
+
+                {[
+                    {data: transferData, title: 'transfers'},
+                    {data: ownTransferData, title: 'ownTransfers'},
+                    {data: incomes, title: 'incomes'},
+                    {data: outcomes, title: 'outcomes'},
+                ].map(({data, title}, index) => (
+                    Array.isArray(data) && data.length > 0 && (
+                        <div key={index} className="bg-white p-4 rounded-lg shadow-md mb-6">
+                            <h3 className="text-lg font-bold mb-2">{getTransactionTitle(title)}</h3>
+                            {data.sort((a, b) => new Date(b.date) - new Date(a.date)).map((transaction, idx) => (
+                                <div key={idx} className="mb-4">
+                                    <p>Date: {new Date(transaction.date).toLocaleString()}</p>
+                                    <p>Amount: {transaction.amount}</p>
+                                    <p>Sender Account ID: {transaction.senderAccountId || transaction.fromAccountId || transaction.sender }</p>
+                                    <p>Receiver Account ID: {transaction.receiverAccountId || transaction.toAccountId || transaction.accountId}</p>
+                                </div>
+                            ))}
+                        </div>
+                    )
+                ))}
             </main>
             <footer className="bg-gray-800 text-white py-4">
                 <div className="container mx-auto text-center">
@@ -293,7 +407,7 @@ function CustomerMain() {
                 </div>
             </footer>
         </div>
-);
+    );
 }
 
 export default CustomerMain;

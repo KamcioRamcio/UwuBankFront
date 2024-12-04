@@ -2,13 +2,11 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import apiUrl from "../../constants/api";
 
-function EmployeeLogin() {
+function CustomerLogin() {
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState(null);
     const navigate = useNavigate();
-
-
 
     const handleSubmit = async (event) => {
         event.preventDefault();
@@ -42,7 +40,7 @@ function EmployeeLogin() {
 
     return (
         <div className="max-w-md mx-auto mt-10 p-6 border border-gray-300 rounded-lg shadow-lg">
-            <h2 className="text-2xl font-bold text-center mb-6">Employee Login</h2>
+            <h2 className="text-2xl font-bold text-center mb-6">Customer Login</h2>
             <form onSubmit={handleSubmit}>
                 <div className="mb-4">
                     <label htmlFor="username" className="block text-sm font-medium text-gray-700">Username:</label>
@@ -68,8 +66,8 @@ function EmployeeLogin() {
                 </div>
                 {error && <p className="text-red-500 text-sm mb-4">{error}</p>}
                 <button
+                    type="submit"
                     className="w-full py-2 px-4 bg-blue-600 text-white font-semibold rounded-md shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                    onClick={handleSubmit}
                 >
                     Login
                 </button>
@@ -78,4 +76,4 @@ function EmployeeLogin() {
     );
 }
 
-export default EmployeeLogin;
+export default CustomerLogin;
