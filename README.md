@@ -84,3 +84,13 @@ empty body
     "customerId": 1
 }
 ```
+### ADD MORE ENDPOINTS
+
+### TODO
+```
+Strona do tworzenia konta
+Generowanie statmentu w danym okresie
+Rozbudowanie strony pracownika z możliwością sprawdzenia stanu konta klienta transakcji itp
+Tworznie kart płatyniczych przez klientów podpiete pod dane konta
+Konta oszczędnościowe i kredyty
+```
