@@ -3,6 +3,9 @@ import React from 'react';
 function EmployeeMain() {
     const empData = JSON.parse(localStorage.getItem('empData'));
     const { employee, customers, branch } = empData;
+    if (!employee) {
+        return <div>No employee data available</div>;
+    }
 
     const handleLogout = () => {
         localStorage.removeItem('empData');

@@ -27,6 +27,12 @@ function CustomerLogin() {
 
             const data = await response.json();
             console.log('Login successful:', data);
+
+            // Check if the customer is null
+            if (data.customer === null) {
+                throw new Error('Customer data is null');
+            }
+
             localStorage.removeItem('empData');
             localStorage.setItem('username', username);
             localStorage.setItem('customerData', JSON.stringify(data));

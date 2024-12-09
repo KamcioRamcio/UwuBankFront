@@ -29,6 +29,9 @@ function EmployeeLogin() {
 
             const data = await response.json();
             console.log('Login successful:', data);
+            if (data.employee === null) {
+                throw new Error('Employee data is null');
+            }
             localStorage.removeItem('empData');
             localStorage.setItem('username', username);
             localStorage.setItem('empData', JSON.stringify(data));

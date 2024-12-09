@@ -2,8 +2,9 @@ import React, { useEffect, useState, useCallback } from "react";
 import Transfer from "./Transfer";
 import OwnTransfer from "./OwnTransfer";
 import apiUrl from "../../constants/api";
-
+import { useNavigate } from 'react-router-dom';
 function CustomerMain() {
+    const navigate = useNavigate();
     const customerData = JSON.parse(localStorage.getItem('customerData'));
     const { customer } = customerData;
     const [accounts, setAccounts] = useState([]);
@@ -23,13 +24,14 @@ function CustomerMain() {
     const [cardType, setCardType] = useState('');
     const [limit, setLimit] = useState('');
     const [selectedCardAccount, setSelectedCardAccount] = useState('');
+  
 
     const fetchAccounts = useCallback(async () => {
         const response = await fetch(apiUrl + 'accounts/' + customer.customerId);
         const data = await response.json();
         setAccounts(data);
     }, [customer.customerId]);
-
+    
     const fetchTransfers = useCallback(async () => {
         try {
             const response = await fetch(apiUrl + 'transfers/customer/' + customer.customerId);
